@@ -1,7 +1,5 @@
 # 🌆 Tech City
 
-![Tech City Banner](assets/img/logo.png)
-
 **Tech City** é um aplicativo de gestão urbana desenvolvido como projeto da faculdade **FIAP**. Ele permite que os habitantes de uma cidade registrem ocorrências do dia a dia, como acidentes, alagamentos, falta de energia e outros problemas, promovendo uma gestão mais eficiente e transparente da cidade. 🏙️✨
 
 ---
