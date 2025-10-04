@@ -1,5 +1,6 @@
 package com.smarthas.controller;
 
+import com.smarthas.dto.OcorrenciaResponseDTO;
 import com.smarthas.model.Ocorrencia;
 import com.smarthas.model.UserAccount;
 import com.smarthas.repository.UserAccountRepository;
@@ -31,14 +32,18 @@ public class OcorrenciaController {
 
     @GetMapping
     @PreAuthorize("hasAnyRole('USER','ADMIN')")
-    public List<Ocorrencia> listarTodas() {
-        return service.listarTodas();
+    public List<OcorrenciaResponseDTO> listarTodas() {
+        return service.listarTodas()
+                .stream()
+                .map(OcorrenciaResponseDTO::new)
+                .toList();
     }
 
     @GetMapping("/{id}")
     @PreAuthorize("hasAnyRole('USER','ADMIN')")
-    public ResponseEntity<Ocorrencia> buscarPorId(@PathVariable Long id) {
-        return ResponseEntity.ok(service.buscarPorId(id));
+    public ResponseEntity<OcorrenciaResponseDTO> buscarPorId(@PathVariable Long id) {
+        Ocorrencia ocorrencia = service.buscarPorId(id);
+        return ResponseEntity.ok(new OcorrenciaResponseDTO(ocorrencia));
     }
 
     @PostMapping

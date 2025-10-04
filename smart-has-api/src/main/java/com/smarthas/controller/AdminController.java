@@ -60,7 +60,7 @@ public class AdminController {
     }
 
     @PutMapping("/users/{id}")
-    public ResponseEntity<?> atualizarUsuario(@PathVariable Long id, @RequestBody UserCreateRequest req) {
+    public ResponseEntity<?> atualizarUsuario( @PathVariable("id") Long id, @RequestBody UserCreateRequest req) {
         return userRepo.findById(id).map(u -> {
             u.setUsername(req.getUsername());
             // Atualiza senha apenas se for enviada

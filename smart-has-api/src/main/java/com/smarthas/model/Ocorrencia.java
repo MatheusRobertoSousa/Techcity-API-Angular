@@ -1,11 +1,11 @@
 package com.smarthas.model;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
+
 import java.time.LocalDateTime;
 
 @Entity
@@ -17,7 +17,8 @@ import java.time.LocalDateTime;
 public class Ocorrencia {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @SequenceGenerator(name = "ocorr_seq", sequenceName = "OCORRENCIAS_SEQ", allocationSize = 1)
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "ocorr_seq")
     private Long id;
 
     @NotBlank(message = "O título é obrigatório")
@@ -31,9 +32,7 @@ public class Ocorrencia {
     @Column(length = 2000)
     private String descricao;
 
-    // RELAÇÃO COM USUÁRIO
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id")
-    @JsonIgnore // evita loop na serialização
-    private UserAccount user;
+    @JoinColumn(name = "user_id", nullable = false)
+    private UserAccount user;  // <- aqui é o que faltava
 }

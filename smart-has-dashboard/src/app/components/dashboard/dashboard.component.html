@@ -7,6 +7,9 @@
     <a routerLink="/admin" routerLinkActive="active">
       <span class="icon">👤</span> Usuários
     </a>
+          <a routerLink="/relatorio" routerLinkActive="active">
+      <span class="icon">📋</span> Relatórios
+    </a>
   </nav>
   <button (click)="logout()">Sair</button>
 </header>
@@ -31,6 +34,11 @@
     <h2>Usuários</h2>
     <p>Gerencie usuários, permissões e roles do sistema.</p>
     <a routerLink="/admin" class="btn-card">Acessar</a>
+  </div>
+    <div class="card">
+    <h2>Relatórios</h2>
+    <p>Gere relatórios de usuários.</p>
+    <a routerLink="/relatorio" class="btn-card">Acessar</a>
   </div>
 </section>
 </main>
