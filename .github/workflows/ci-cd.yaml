@@ -27,7 +27,7 @@ jobs:
         run: mvn test
 
       - name: Arquivar resultados dos testes
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: test-results
           path: backend/target/surefire-reports/*.xml
@@ -69,7 +69,7 @@ jobs:
           echo "Deploy concluído em: $(date)" > deploy-logs/log.txt
 
       - name: Publicar logs
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: deploy-logs
           path: deploy-logs/log.txt
