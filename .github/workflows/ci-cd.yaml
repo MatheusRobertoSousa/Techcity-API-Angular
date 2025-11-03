@@ -48,20 +48,21 @@ jobs:
       - name: Checkout do código
         uses: actions/checkout@v4
 
-      - name: Instalar Node.js
+      - name: Instalar Node.js 22
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
 
-      - name: Instalar dependências e Build do Front-end (Angular)
+      - name: Instalar dependências do Front-end
         working-directory: smart-has-dashboard
-        run: |
-          npm ci
-          npx ng build --configuration production
+        run: npm ci
+
+      - name: Build do Front-end (Angular)
+        working-directory: smart-has-dashboard
+        run: npx ng build --configuration production
 
       - name: Arquivar artefatos do Front-end
         uses: actions/upload-artifact@v4
         with:
           name: frontend-build
           path: smart-has-dashboard/dist/
-
