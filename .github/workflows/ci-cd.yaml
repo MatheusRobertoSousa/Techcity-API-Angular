@@ -27,7 +27,6 @@ jobs:
         run: mvn test
 
       - name: Arquivar resultados dos testes
-        if: always()
         uses: actions/upload-artifact@v3
         with:
           name: test-results
@@ -53,21 +52,23 @@ jobs:
           scp backend/target/smart-has-backend.jar ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/caminho/do/app/
           echo "Deploy backend concluído."
 
-      - name: Executar scripts Oracle PL/SQL
+      - name: Executar scripts Oracle PL/SQL - Setup
         env:
           ORACLE_USER: ${{ secrets.ORACLE_USER }}
           ORACLE_PASSWORD: ${{ secrets.ORACLE_PASSWORD }}
           ORACLE_HOST: ${{ secrets.ORACLE_HOST }}
         run: |
-          echo "Executando setup e testes Oracle..."
+          echo "Executando setup Oracle..."
           sqlplus $ORACLE_USER/$ORACLE_PASSWORD@$ORACLE_HOST @scripts/setup.sql
           sqlplus $ORACLE_USER/$ORACLE_PASSWORD@$ORACLE_HOST @scripts/seed.sql
           sqlplus $ORACLE_USER/$ORACLE_PASSWORD@$ORACLE_HOST @scripts/test_alertas.sql
 
-      - name: Publicar logs
+      - name: Criar logs de deploy
         run: |
           mkdir -p deploy-logs
           echo "Deploy concluído em: $(date)" > deploy-logs/log.txt
+
+      - name: Publicar logs
         uses: actions/upload-artifact@v3
         with:
           name: deploy-logs
