@@ -1,4 +1,4 @@
-name: Smart HAS CI/CD
+name: Smart HAS CI/CD Pipeline
 
 on:
   push:
@@ -7,69 +7,94 @@ on:
     branches: [ main ]
 
 jobs:
-  build-and-test:
+  build-and-test-backend:
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout do código
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Configurar JDK 17
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Build backend
+      - name: Build do Back-end (Spring Boot)
+        working-directory: smart-has-api
         run: mvn clean install -DskipTests=false
 
-      - name: Executar testes backend
+      - name: Executar Testes do Back-end
+        working-directory: smart-has-api
         run: mvn test
 
-      - name: Arquivar resultados dos testes
+      - name: Arquivar resultados dos testes do Back-end
         uses: actions/upload-artifact@v4
         with:
-          name: test-results
-          path: backend/target/surefire-reports/*.xml
+          name: backend-test-results
+          path: smart-has-api/target/surefire-reports/*.xml
 
-  deploy:
-    needs: build-and-test
+  build-frontend:
     runs-on: ubuntu-latest
+    needs: build-and-test-backend
 
     steps:
       - name: Checkout do código
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
+
+      - name: Instalar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Instalar dependências e Build do Front-end (Angular)
+        working-directory: smart-has-dashboard
+        run: |
+          npm install
+          npm run build --if-present
+
+      - name: Arquivar artefatos do Front-end
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-build
+          path: smart-has-dashboard/dist
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: [build-and-test-backend, build-frontend]
+
+    steps:
+      - name: Checkout do código
+        uses: actions/checkout@v4
 
       - name: Configurar JDK 17
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Deploy Back-end
+      - name: Deploy do Back-end
         run: |
           echo "Iniciando deploy do backend..."
-          scp backend/target/smart-has-backend.jar ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/caminho/do/app/
+          scp smart-has-api/target/smart-has-api.jar ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/opt/smart-has/
           echo "Deploy backend concluído."
 
-      - name: Executar scripts Oracle PL/SQL - Setup
+      - name: Executar scripts PL/SQL no Oracle
         env:
           ORACLE_USER: ${{ secrets.ORACLE_USER }}
           ORACLE_PASSWORD: ${{ secrets.ORACLE_PASSWORD }}
           ORACLE_HOST: ${{ secrets.ORACLE_HOST }}
         run: |
-          echo "Executando setup Oracle..."
-          sqlplus $ORACLE_USER/$ORACLE_PASSWORD@$ORACLE_HOST @scripts/setup.sql
-          sqlplus $ORACLE_USER/$ORACLE_PASSWORD@$ORACLE_HOST @scripts/seed.sql
-          sqlplus $ORACLE_USER/$ORACLE_PASSWORD@$ORACLE_HOST @scripts/test_alertas.sql
+          echo "Executando scripts SQL no Oracle..."
+          sqlplus $ORACLE_USER/$ORACLE_PASSWORD@$ORACLE_HOST @ScriptsSQL/setup.sql
 
-      - name: Criar logs de deploy
+      - name: Gerar log do deploy
         run: |
-          mkdir -p deploy-logs
-          echo "Deploy concluído em: $(date)" > deploy-logs/log.txt
+          mkdir -p logs
+          echo "Deploy finalizado com sucesso em $(date)" > logs/deploy_log.txt
 
-      - name: Publicar logs
+      - name: Publicar logs de execução
         uses: actions/upload-artifact@v4
         with:
           name: deploy-logs
-          path: deploy-logs/log.txt
+          path: logs/deploy_log.txt
