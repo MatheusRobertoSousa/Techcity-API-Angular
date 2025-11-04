@@ -1,5 +1,7 @@
 <header class="dashboard-header">
-  <h1>Dashboard Tech City</h1>
+  <a routerLink="/dashboard" routerLinkActive="active">
+      <h1>Dashboard Tech City</h1>
+    </a>  
   <nav>
     <a routerLink="/dashboard/ocorrencias" routerLinkActive="active">
       <span class="icon">📋</span> Ocorrências
@@ -10,8 +12,11 @@
           <a routerLink="/relatorio" routerLinkActive="active">
       <span class="icon">📋</span> Relatórios
     </a>
+          <a routerLink="/chatBot" routerLinkActive="active">
+      <span class="icon">🤖</span> ChatBot
+    </a>
+    <button (click)="logout()">Sair</button>
   </nav>
-  <button (click)="logout()">Sair</button>
 </header>
 
 <main class="dashboard-main">

@@ -1,0 +1,31 @@
+<div class="chat-container">
+    <header class="dashboard-header">
+  <a routerLink="/dashboard" routerLinkActive="active">
+      <h1>Dashboard Tech City</h1>
+    </a>  
+  <nav>
+    <a routerLink="/dashboard/ocorrencias" routerLinkActive="active">
+      <span class="icon">📋</span> Ocorrências
+    </a>
+    <a routerLink="/admin" routerLinkActive="active">
+      <span class="icon">👤</span> Usuários
+    </a>
+          <a routerLink="/relatorio" routerLinkActive="active">
+      <span class="icon">📋</span> Relatórios
+    </a>
+          <a routerLink="/chatBot" routerLinkActive="active">
+      <span class="icon">🤖</span> ChatBot
+    </a>
+  </nav>
+</header>
+  <div class="chat-box">
+    <div *ngFor="let msg of mensagens" [ngClass]="{'user': msg.remetente === 'Cidadão', 'ia': msg.remetente === 'SmartHAS'}">
+      <strong>{{msg.remetente}}:</strong> {{msg.texto}}
+    </div>
+  </div>
+
+  <div class="input-area">
+    <input type="text" [(ngModel)]="inputUsuario" placeholder="Pergunte sobre sua cidade..." (keyup.enter)="enviarMensagem()">
+    <button (click)="enviarMensagem()">Enviar</button>
+  </div>
+</div>

@@ -1,0 +1,191 @@
+// === VARIÁVEIS DE COR ===
+$primary-color: #3B7D3C;      // verde
+$primary-hover: #2f6530;      // verde escuro
+$glow-color: #FFF4CC;         // amarelo
+$background-dark: #3B7D3C;    // verde escuro
+$background-mid: #91B86F;     // verde claro intermediário
+$background-light: #FFF4CC;   // amarelo suave
+
+.chat-container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background: linear-gradient(180deg, $background-light, $background-mid);
+  font-family: "Poppins", sans-serif;
+  color: #333;
+
+  header.dashboard-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: linear-gradient(135deg, $background-light, $background-mid, $background-dark);
+    background-size: 300% 300%;
+    animation: gradientBG 15s ease infinite;
+    color: white;
+    padding: 1rem 2rem;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+
+    h1 {
+      margin: 0;
+      font-size: 1.6rem;
+      font-weight: 800;
+      background: linear-gradient(90deg, $background-dark, $primary-hover);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      text-shadow: 0 0 10px rgba($glow-color, 0.8);
+      cursor: pointer;
+      transition: all 0.3s ease;
+
+      &:hover {
+        text-shadow: 0 0 15px rgba($glow-color, 1), 0 0 25px rgba($primary-color, 0.6);
+        transform: scale(1.05);
+      }
+    }
+
+    nav {
+      display: flex;
+      gap: 1.5rem;
+
+      a {
+        color: #333;
+        text-decoration: none;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+        position: relative;
+        transition: all 0.3s ease;
+        padding: 0.4rem 0.6rem;
+        border-radius: 0.5rem;
+
+        &:hover {
+          color: $primary-color;
+          background: rgba($primary-color, 0.1);
+          box-shadow: 0 0 10px rgba($primary-color, 0.3);
+          transform: translateY(-2px);
+        }
+
+        &::after {
+          content: '';
+          position: absolute;
+          width: 0;
+          height: 3px;
+          background: $glow-color;
+          bottom: 0;
+          left: 0;
+          border-radius: 2px;
+          transition: width 0.3s ease;
+        }
+
+        &:hover::after,
+        &.active::after {
+          width: 100%;
+        }
+
+        .icon {
+          font-size: 1.3rem;
+        }
+      }
+    }
+  }
+
+  .chat-box {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 1.5rem;
+    overflow-y: auto;
+    background: linear-gradient(to bottom, rgba(255,255,255,0.9), rgba(145,184,111,0.2));
+  }
+
+  .user,
+  .ia {
+    max-width: 70%;
+    padding: 0.8rem 1rem;
+    border-radius: 1rem;
+    margin-bottom: 0.8rem;
+    line-height: 1.4;
+    word-wrap: break-word;
+    font-size: 0.95rem;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+    animation: fadeIn 0.25s ease-in-out;
+  }
+
+  .user {
+    align-self: flex-end;
+    background: linear-gradient(135deg, $primary-color, $primary-hover);
+    color: white;
+    border-bottom-right-radius: 0.3rem;
+  }
+
+  .ia {
+    align-self: flex-start;
+    background: $background-light;
+    color: #1e1e1e;
+    border-bottom-left-radius: 0.3rem;
+    border: 1px solid rgba($primary-color, 0.2);
+  }
+
+  .input-area {
+    display: flex;
+    align-items: center;
+    padding: 1rem;
+    background: white;
+    border-top: 2px solid rgba($primary-color, 0.2);
+
+    input {
+      flex: 1;
+      padding: 0.8rem 1rem;
+      border: 1px solid rgba($primary-color, 0.4);
+      border-radius: 1rem;
+      outline: none;
+      transition: all 0.3s ease;
+      font-size: 0.95rem;
+
+      &:focus {
+        border-color: $primary-color;
+        box-shadow: 0 0 8px rgba($primary-color, 0.3);
+      }
+    }
+
+    button {
+      background: $primary-color;
+      color: white;
+      border: none;
+      padding: 0.8rem 1.2rem;
+      border-radius: 1rem;
+      margin-left: 0.8rem;
+      cursor: pointer;
+      font-weight: 600;
+      transition: all 0.3s ease;
+      box-shadow: 0 0 8px rgba($primary-color,0.4);
+
+      &:hover {
+        background: $primary-hover;
+        transform: scale(1.05);
+        box-shadow: 0 0 15px rgba($primary-color,0.7), 0 0 25px rgba($glow-color,0.4);
+      }
+
+      &:active {
+        transform: scale(0.97);
+      }
+    }
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes gradientBG {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}

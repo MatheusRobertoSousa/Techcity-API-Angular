@@ -5,6 +5,7 @@ import { OcorrenciaListComponent } from './components/ocorrencia-list/ocorrencia
 import { RegisterComponent } from './components/register/register.component';
 import { AdminUsuariosComponent } from './components/admin/admin-usuarios.component';
 import { RelatorioComponent } from './components/relatorio/relatorio.component'; // ✅ importa o componente
+import { ChatbotComponent } from './components/chatbot/chatbot.component';
 
 export const routes: Routes = [
   { path: '', component: LoginComponent },
@@ -15,6 +16,7 @@ export const routes: Routes = [
 
   // ✅ nova rota para o relatório
   { path: 'relatorio', component: RelatorioComponent },
+  { path: 'chatBot', component: ChatbotComponent },
 
   // redirecionamento padrão
   { path: '**', redirectTo: '' }
