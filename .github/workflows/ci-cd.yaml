@@ -1,68 +1,141 @@
-name: Smart HAS CI/CD Pipeline
+
+name: Smart HAS CI/CD
 
 on:
   push:
     branches: [ main ]
   pull_request:
     branches: [ main ]
+  workflow_dispatch:
 
 jobs:
   build-and-test-backend:
+    name: Build & Test Backend (Spring Boot)
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout do código
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Configurar JDK 21
+      - name: Set up JDK 21
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '21'
 
-      - name: Build do Back-end (Spring Boot)
-        working-directory: smart-has-api
-        run: mvn clean install -DskipTests=false
+      - name: Cache Maven
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-m2-
 
-      - name: Executar Testes do Back-end
+      - name: Build & Test with Maven
         working-directory: smart-has-api
-        run: mvn test
+        run: mvn -B -U -ntp clean verify
 
-      - name: Arquivar resultados dos testes do Back-end
+      - name: Upload test reports
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: backend-test-results
           path: smart-has-api/target/surefire-reports/*.xml
 
-      - name: Arquivar build do Back-end
+      - name: Upload backend jar
         uses: actions/upload-artifact@v4
         with:
           name: backend-build
           path: smart-has-api/target/*.jar
 
   build-frontend:
+    name: Build Frontend (Angular)
     runs-on: ubuntu-latest
     needs: build-and-test-backend
-
     steps:
-      - name: Checkout do código
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Instalar Node.js 22
+      - name: Set up Node.js 22
         uses: actions/setup-node@v4
         with:
           node-version: 22
 
-      - name: Instalar dependências do Front-end
+      - name: Install dependencies
         working-directory: smart-has-dashboard
         run: npm ci
 
-      - name: Build do Front-end (Angular)
+      - name: Build Angular (production)
         working-directory: smart-has-dashboard
         run: npx ng build --configuration production
 
-      - name: Arquivar artefatos do Front-end
+      - name: Upload frontend dist
         uses: actions/upload-artifact@v4
         with:
           name: frontend-build
-          path: smart-has-dashboard/dist/
+          path: smart-has-dashboard/dist/**
+
+  deploy-db-and-backend:
+    name: Deploy DB (scripts) & Backend
+    runs-on: ubuntu-latest
+    needs: [build-and-test-backend, build-frontend]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download backend jar
+        uses: actions/download-artifact@v4
+        with:
+          name: backend-build
+          path: dist
+
+      - name: Install Oracle Instant Client & sqlplus
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libaio1 unzip curl
+          curl -L -o ic.zip https://download.oracle.com/otn_software/linux/instantclient/instantclient-basiclite-linuxx64.zip
+          unzip ic.zip -d $HOME/oracle
+          curl -L -o sqlplus.zip https://download.oracle.com/otn_software/linux/instantclient/instantclient-sqlplus-linuxx64.zip
+          unzip sqlplus.zip -d $HOME/oracle
+          echo "$HOME/oracle/instantclient_*" >> $GITHUB_PATH
+          echo "LD_LIBRARY_PATH=$HOME/oracle/instantclient_*:$LD_LIBRARY_PATH" >> $GITHUB_ENV
+
+      - name: Apply DB scripts (01/02/03)
+        env:
+          ORACLE_CONNECT_STRING: ${{ secrets.ORACLE_CONNECT_STRING }}
+          ORACLE_USERNAME: ${{ secrets.ORACLE_USERNAME }}
+          ORACLE_PASSWORD: ${{ secrets.ORACLE_PASSWORD }}
+        run: |
+          sqlplus -s $ORACLE_USERNAME/$ORACLE_PASSWORD@//$ORACLE_CONNECT_STRING @db/deploy/01_packages.sql
+          sqlplus -s $ORACLE_USERNAME/$ORACLE_PASSWORD@//$ORACLE_CONNECT_STRING @db/deploy/02_triggers.sql
+          sqlplus -s $ORACLE_USERNAME/$ORACLE_PASSWORD@//$ORACLE_CONNECT_STRING @db/deploy/03_grants.sql
+
+      - name: Deploy backend JAR to server
+        env:
+          SSH_HOST: ${{ secrets.SERVER_SSH_HOST }}
+          SSH_USER: ${{ secrets.SERVER_SSH_USER }}
+          SSH_KEY:  ${{ secrets.SERVER_SSH_KEY }}
+        run: |
+          echo "$SSH_KEY" > key.pem
+          chmod 600 key.pem
+          JAR_PATH=$(ls dist/*.jar | head -n1)
+          scp -i key.pem -o StrictHostKeyChecking=no "$JAR_PATH" $SSH_USER@$SSH_HOST:/opt/smarthas/smarthas-api.jar
+          ssh -i key.pem -o StrictHostKeyChecking=no $SSH_USER@$SSH_HOST "sudo systemctl restart smarthas-api || true"
+          ssh -i key.pem -o StrictHostKeyChecking=no $SSH_USER@$SSH_HOST "sleep 6 && curl -sf http://localhost:8080/actuator/health || (journalctl -u smarthas-api -n 200 --no-pager; exit 1)"
+
+      - name: Fetch deploy logs
+        if: always()
+        env:
+          SSH_HOST: ${{ secrets.SERVER_SSH_HOST }}
+          SSH_USER: ${{ secrets.SERVER_SSH_USER }}
+          SSH_KEY:  ${{ secrets.SERVER_SSH_KEY }}
+        run: |
+          echo "$SSH_KEY" > key.pem
+          chmod 600 key.pem
+          ssh -i key.pem -o StrictHostKeyChecking=no $SSH_USER@$SSH_HOST "journalctl -u smarthas-api -n 500 --no-pager" > deploy.log || true
+
+      - name: Upload deploy logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: deploy-logs
+          path: deploy.log
