@@ -48,7 +48,7 @@ public class LlmService {
     private String gerarRelatorioSimulado() {
         LocalDate hoje = LocalDate.now();
         return String.format(
-                "📊 Relatório Smart HAS - %s%n%n" +
+                "📊 Relatório Tech City - %s%n%n" +
                         "• Ocorrências resolvidas esta semana: %d%n" +
                         "• Ocorrências críticas em andamento: %d%n" +
                         "• Consumo médio de energia pública: %.2f MWh%n" +

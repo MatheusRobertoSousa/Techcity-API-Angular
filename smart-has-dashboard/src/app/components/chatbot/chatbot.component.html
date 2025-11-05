@@ -19,7 +19,7 @@
   </nav>
 </header>
   <div class="chat-box">
-    <div *ngFor="let msg of mensagens" [ngClass]="{'user': msg.remetente === 'Cidadão', 'ia': msg.remetente === 'SmartHAS'}">
+    <div *ngFor="let msg of mensagens" [ngClass]="{'user': msg.remetente === 'Cidadão', 'ia': msg.remetente === 'Athena'}">
       <strong>{{msg.remetente}}:</strong> {{msg.texto}}
     </div>
   </div>

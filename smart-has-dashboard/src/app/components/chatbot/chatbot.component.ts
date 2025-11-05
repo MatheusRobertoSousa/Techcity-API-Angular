@@ -25,8 +25,8 @@ export class ChatbotComponent {
     this.inputUsuario = '';
 
     this.http.post(this.apiUrl, mensagem, { responseType: 'text' }).subscribe({
-      next: (resposta) => this.mensagens.push({ remetente: 'SmartHAS', texto: resposta }),
-      error: () => this.mensagens.push({ remetente: 'SmartHAS', texto: 'Erro ao conectar ao servidor da cidade.' })
+      next: (resposta) => this.mensagens.push({ remetente: 'Athena', texto: resposta }),
+      error: () => this.mensagens.push({ remetente: 'Athena', texto: 'Erro ao conectar ao servidor da cidade.' })
     });
   }
 }

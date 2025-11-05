@@ -6,238 +6,63 @@ on:
   pull_request:
     branches: [ main ]
 
-env:
-  REGISTRY: ghcr.io
-  IMAGE_NAME_BACKEND: ${{ github.repository }}/smart-has-api
-  IMAGE_NAME_FRONTEND: ${{ github.repository }}/smart-has-dashboard
-
 jobs:
   build-and-test-backend:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout
+      - name: Checkout do código
         uses: actions/checkout@v4
 
-      - name: Setup JDK 21
+      - name: Configurar JDK 21
         uses: actions/setup-java@v4
         with:
-          distribution: temurin
+          distribution: 'temurin'
           java-version: '21'
 
-      - name: Cache Maven
-        uses: actions/cache@v4
-        with:
-          path: ~/.m2/repository
-          key: m2-${{ runner.os }}-${{ hashFiles('**/pom.xml') }}
-          restore-keys: m2-${{ runner.os }}-
-
-      - name: Build (mvn)
+      - name: Build do Back-end (Spring Boot)
         working-directory: smart-has-api
-        run: mvn -B -DskipTests=false clean verify
+        run: mvn clean install -DskipTests=false
 
-      - name: Test report (Surefire/JUnit) -> Summary
-        uses: dorny/test-reporter@v1
-        if: always()
+      - name: Executar Testes do Back-end
+        working-directory: smart-has-api
+        run: mvn test
+
+      - name: Arquivar resultados dos testes do Back-end
+        uses: actions/upload-artifact@v4
         with:
-          name: Backend Tests
+          name: backend-test-results
           path: smart-has-api/target/surefire-reports/*.xml
-          reporter: java-junit
 
-      - name: Coverage (JaCoCo) -> Artifact
-        if: always()
+      - name: Arquivar build do Back-end
         uses: actions/upload-artifact@v4
         with:
-          name: backend-coverage
-          path: smart-has-api/target/site/jacoco/
-
-      - name: Package JAR -> Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: backend-jar
+          name: backend-build
           path: smart-has-api/target/*.jar
 
-  build-and-test-frontend:
+  build-frontend:
     runs-on: ubuntu-latest
     needs: build-and-test-backend
+
     steps:
-      - name: Checkout
+      - name: Checkout do código
         uses: actions/checkout@v4
 
-      - name: Setup Node 22
+      - name: Instalar Node.js 22
         uses: actions/setup-node@v4
         with:
           node-version: 22
 
-      - name: Install deps
+      - name: Instalar dependências do Front-end
         working-directory: smart-has-dashboard
         run: npm ci
 
-      - name: Test (Angular)
-        working-directory: smart-has-dashboard
-        run: npm test -- --watch=false --browsers=ChromeHeadless || true
-
-      - name: Build (Angular prod)
+      - name: Build do Front-end (Angular)
         working-directory: smart-has-dashboard
         run: npx ng build --configuration production
 
-      - name: Upload dist
+      - name: Arquivar artefatos do Front-end
         uses: actions/upload-artifact@v4
         with:
-          name: frontend-dist
+          name: frontend-build
           path: smart-has-dashboard/dist/
-
-  db-migrations-oracle:
-    runs-on: ubuntu-latest
-    needs: [build-and-test-backend]
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      # Exemplo 1: validar conexão Oracle “real” (usar secrets) OU
-      # Exemplo 2: simular Oracle com container XE + rodar scripts (para PRs)
-      - name: Start Oracle XE (simulado para CI)
-        run: |
-          docker run -d --name oracle-xe -p 1521:1521 -e ORACLE_PASSWORD=oracle gvenzl/oracle-xe:21-slim
-          sleep 60
-
-      - name: Apply migrations (Liquibase) OU scripts SQL
-        env:
-          ORACLE_HOST: localhost
-          ORACLE_PORT: 1521
-          ORACLE_SERVICE: XEPDB1
-          ORACLE_USER: system
-          ORACLE_PASSWORD: oracle
-        run: |
-          # Exemplo com sqlplus via container:
-          echo "Rodando scripts de schema/objects..."
-          docker exec oracle-xe bash -lc "echo 'CREATE USER SMARTHAS IDENTIFIED BY SMARTHAS DEFAULT TABLESPACE users TEMPORARY TABLESPACE temp;' | sqlplus -s system/oracle@localhost:1521/XEPDB1 || true"
-          docker exec oracle-xe bash -lc "echo 'GRANT CONNECT, RESOURCE, CREATE SEQUENCE, CREATE TRIGGER TO SMARTHAS;' | sqlplus -s system/oracle@localhost:1521/XEPDB1 || true"
-          # Ajuste caminhos conforme seu repo:
-          for f in 01_packages.sql 02_triggers.sql 03_grants.sql; do
-            docker exec oracle-xe bash -lc \"sqlplus -s SMARTHAS/SMARTHAS@localhost:1521/XEPDB1 @/work/${f}\" || true
-          done
-
-      - name: Upload DB logs
-        uses: actions/upload-artifact@v4
-        with:
-          name: db-migration-logs
-          path: .
-        if: always()
-
-  ai-layer-check:
-    runs-on: ubuntu-latest
-    needs: [build-and-test-backend]
-    env:
-      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }} # opcional
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Node runtime
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-
-      - name: Run AI smoke test (mock if no API key)
-        working-directory: smart-has-api
-        run: |
-          node -e "
-          const hasKey = !!process.env.OPENAI_API_KEY;
-          const sampleData = { ocorrenciasCriticas: 3, bairros:'Centro, Leste' };
-          const nlg = hasKey
-            ? 'Relatório (LLM real): Foram detectadas 3 ocorrências críticas nos bairros Centro e Leste nas últimas 24h.'
-            : 'Relatório (LLM simulado): Foram detectadas 3 ocorrências críticas nos bairros Centro e Leste nas últimas 24h.';
-          const suggestions = hasKey
-            ? ['Priorizar equipe de iluminação no Centro', 'Recalibrar sensores L5', 'Enviar push aos usuários afetados']
-            : ['[SIMULADO] Priorizar equipe de iluminação no Centro','[SIMULADO] Recalibrar sensores L5','[SIMULADO] Enviar push aos usuários afetados'];
-          const out = { ok:true, usingLLM:hasKey, sampleData, nlg, suggestions };
-          require('fs').writeFileSync('ai-smoketest.json', JSON.stringify(out, null, 2));
-          console.log(nlg);
-          "
-
-      - name: Upload AI report
-        uses: actions/upload-artifact@v4
-        with:
-          name: ai-smoketest
-          path: smart-has-api/ai-smoketest.json
-
-  dockerize-and-push:
-    runs-on: ubuntu-latest
-    needs: [build-and-test-backend, build-and-test-frontend, ai-layer-check]
-    permissions:
-      contents: read
-      packages: write
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Login GHCR
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Build & Push Backend image
-        run: |
-          docker build -t $REGISTRY/${{ env.IMAGE_NAME_BACKEND }}:latest -f smart-has-api/Dockerfile .
-          docker push $REGISTRY/${{ env.IMAGE_NAME_BACKEND }}:latest
-
-      - name: Build & Push Frontend image (nginx)
-        run: |
-          docker build -t $REGISTRY/${{ env.IMAGE_NAME_FRONTEND }}:latest -f smart-has-dashboard/Dockerfile .
-          docker push $REGISTRY/${{ env.IMAGE_NAME_FRONTEND }}:latest
-
-  deploy-backend:
-    runs-on: ubuntu-latest
-    needs: [dockerize-and-push, db-migrations-oracle]
-    if: github.ref == 'refs/heads/main'
-    steps:
-      - name: SSH to server and deploy
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USER }}
-          key: ${{ secrets.SSH_KEY }}
-          script: |
-            docker login $REGISTRY -u ${{ secrets.GHCR_USER }} -p ${{ secrets.GHCR_TOKEN }}
-            docker pull $REGISTRY/${{ env.IMAGE_NAME_BACKEND }}:latest
-            docker compose -f /opt/smarthas/docker-compose.yml up -d backend
-            docker logs --since 10m backend > /opt/smarthas/logs/backend-deploy.log || true
-
-      - name: Fetch deploy logs
-        uses: actions/download-artifact@v4
-        with:
-          name: backend-jar
-        continue-on-error: true
-
-  deploy-frontend:
-    runs-on: ubuntu-latest
-    needs: [dockerize-and-push]
-    if: github.ref == 'refs/heads/main'
-    steps:
-      - name: SSH to server and deploy
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USER }}
-          key: ${{ secrets.SSH_KEY }}
-          script: |
-            docker login $REGISTRY -u ${{ secrets.GHCR_USER }} -p ${{ secrets.GHCR_TOKEN }}
-            docker pull $REGISTRY/${{ env.IMAGE_NAME_FRONTEND }}:latest
-            docker compose -f /opt/smarthas/docker-compose.yml up -d frontend
-            docker logs --since 10m frontend > /opt/smarthas/logs/frontend-deploy.log || true
-
-  summarize:
-    runs-on: ubuntu-latest
-    needs: [build-and-test-backend, build-and-test-frontend, db-migrations-oracle, ai-layer-check, dockerize-and-push]
-    if: always()
-    steps:
-      - name: Job Summary
-        run: |
-          echo "## Smart HAS – CI/CD Summary" >> $GITHUB_STEP_SUMMARY
-          echo "- Backend build/tests ✅" >> $GITHUB_STEP_SUMMARY
-          echo "- Frontend build/tests ✅" >> $GITHUB_STEP_SUMMARY
-          echo "- Oracle migrations/simulação ✅" >> $GITHUB_STEP_SUMMARY
-          echo "- AI layer (real ou simulado) ✅" >> $GITHUB_STEP_SUMMARY
-          echo "- Imagens no GHCR ✅" >> $GITHUB_STEP_SUMMARY
